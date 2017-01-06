@@ -1,0 +1,6 @@
+PyYAML==3.12
+argparse==1.2.1
+beautifulsoup4==4.5.1
+bs4==0.0.1
+mechanize==0.2.5
+wsgiref==0.1.2
