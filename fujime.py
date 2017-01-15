@@ -1,6 +1,6 @@
-import cookielib 
-import urllib2 
-import mechanize 
+import cookielib
+import urllib2
+import mechanize
 import re
 import time
 import smtplib
@@ -18,22 +18,22 @@ NOTIFY_TEMPLATE = "Name: {0} Url: {1} Price: ${2} Availability: {3}"
 
 pp = pprint.PrettyPrinter(indent=4)
 
-# Browser 
-br = mechanize.Browser() 
+# Browser
+br = mechanize.Browser()
 
-# Enable cookie support for urllib2 
-cookiejar = cookielib.LWPCookieJar() 
-br.set_cookiejar( cookiejar ) 
+# Enable cookie support for urllib2
+cookiejar = cookielib.LWPCookieJar()
+br.set_cookiejar( cookiejar )
 
-# Broser options 
-br.set_handle_equiv( True ) 
-br.set_handle_redirect( True ) 
-br.set_handle_referer( True ) 
-br.set_handle_robots( False ) 
+# Broser options
+br.set_handle_equiv( True )
+br.set_handle_redirect( True )
+br.set_handle_referer( True )
+br.set_handle_robots( False )
 
-br.set_handle_refresh( mechanize._http.HTTPRefreshProcessor(), max_time = 10 ) 
+br.set_handle_refresh( mechanize._http.HTTPRefreshProcessor(), max_time = 10 )
 
-br.addheaders = [ ( 'User-agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_1) AppleWebKit/602.2.13 (KHTML, like Gecko) Version/10.0.1 Safari/602.2.13' ) ] 
+br.addheaders = [ ( 'User-agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_1) AppleWebKit/602.2.13 (KHTML, like Gecko) Version/10.0.1 Safari/602.2.13' ) ]
 
 def main(settings):
   urls = settings.get('urls')
@@ -48,23 +48,35 @@ def main(settings):
   email_notify = settings.get('email_notify')
 
   while True:
-    email_message = ""
-    # authenticate 
-    br.open('http://fnacaffiliate.com/v.i.p/index.php?dispatch=auth.login_form&return_url=index.php%3Fdispatch%3Dproducts.view%26product_id%3D362') 
-    br.select_form( name="popup886_form" ) 
-    br[ "user_login" ] = fuji_username
-    br[ "password" ] = fuji_password
-    res = br.submit() 
-  
+    email_message = avail = price = ''
+    # authenticate
+    try:
+      br.open('http://fnacaffiliate.com/v.i.p/index.php?dispatch=auth.login_form&return_url=index.php%3Fdispatch%3Dproducts.view%26product_id%3D362')
+      br.select_form( name="popup886_form" )
+      br[ "user_login" ] = fuji_username
+      br[ "password" ] = fuji_password
+      res = br.submit()
+    except Exception as e:
+      logging.error('Could not login to Fuji\'s website, going to try again in %s seconds: %s' % (sleep, e))
+      time.sleep(sleep)
+      continue
+
     for name, url in urls.iteritems():
-      response = br.open(url)
-      soup = BeautifulSoup(response.read(), 'html.parser')
-      avail = soup.findAll("span", id=re.compile('.*stock_info.*'))
-      price = soup.find("meta", {"itemprop":"price"})
+      try:
+        response = br.open(url)
+        soup = BeautifulSoup(response.read(), 'html.parser')
+        avail = soup.findAll("span", id=re.compile('.*stock_info.*'))
+        price = soup.find("meta", {"itemprop":"price"})
+      except Exception as e:
+        logging.error('Could not retrieve URL from Fuji\'s website, going to try again in %s seconds: %s' % (sleep, e))
+        time.sleep(sleep)
+        continue
       item_info = NOTIFY_TEMPLATE.format(name, url, price['content'], avail[0].contents[0])
       if avail[0].contents[0]=='In stock':
         logging.info('%s' % item_info)
         email_message += item_info + "\n"
+      else:
+        logging.debug('%s' % item_info)
       time.sleep(1)
 
     if email_notify == True and email_message != "":
@@ -95,7 +107,7 @@ def _check_settings(config):
     if not config.get('email_username') or not config.get('email_password'):
       raise ValueError('email_username and email_password are required for sending email. Set email_notify to false to disable mail')
 
-if __name__ == '__main__': 
+if __name__ == '__main__':
   # Configure Basic Logging
   logging.basicConfig(
     level=logging.DEBUG,
@@ -120,10 +132,16 @@ if __name__ == '__main__':
 
   # Configure File Logging
   if settings.get('logfile'):
+    pwd = path.dirname(sys.argv[0])
     handler = logging.FileHandler('%s/%s' % (pwd, settings.get('logfile')))
     handler.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
     handler.setLevel(logging.DEBUG)
     logging.getLogger('').addHandler(handler)
+
+  loglevel_num = getattr(logging, settings.get('loglevel', 'info').upper())
+  if not isinstance(loglevel_num, int):
+    raise ValueError('Invalid log level: %s' % loglevel_num)
+  logging.getLogger('').setLevel(loglevel_num)
 
   logging.debug('Running Fujime with arguments: %s' % arguments)
   main(settings)

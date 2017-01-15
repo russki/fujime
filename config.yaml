@@ -16,3 +16,4 @@ email_to:
 email_username: email@domain.com
 email_password: emailpassword
 smtp_server: smtp.gmail.com:587
+loglevel: info

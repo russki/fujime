@@ -24,6 +24,9 @@ Modify config.yaml with your settings
 - `email_password`: password for the email username
 - `smtp_server`: smtp server that will be used to send emails
   - defaulted to Gmail. Can be any other mail server that supports TLS
+- `loglevel`: log level you want the script to run as. If not set, defaults to INFO
+  - if set to debug, it will print every `check_every_seconds` the status of items
+- `logfile`: if you also want to write the log to a file
 
 ## Running it in virtualenv
 
