@@ -52,7 +52,7 @@ def main(settings):
     # authenticate
     try:
       br.open('http://fnacaffiliate.com/v.i.p/index.php?dispatch=auth.login_form&return_url=index.php%3Fdispatch%3Dproducts.view%26product_id%3D362')
-      br.select_form( name="popup886_form" )
+      br.select_form( name="main_login_form" )
       br[ "user_login" ] = fuji_username
       br[ "password" ] = fuji_password
       res = br.submit()
